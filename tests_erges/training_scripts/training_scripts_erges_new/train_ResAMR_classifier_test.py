@@ -1,6 +1,6 @@
 import sys
 sys.path.insert(0, "..")
-sys.path.insert(0, "../data_split")
+sys.path.insert(0, "../../data_split")
 import os
 # os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
@@ -16,17 +16,17 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from tqdm import tqdm
 from argparse import ArgumentParser
 import json
-from multimodal_amr.experiments.pl_experiment import Classifier_Experiment
+from multimodal_amr_tests_erges.experiments.pl_experiment import Classifier_Experiment
 import itertools
-from multimodal_amr.data_split.data_utils import DataSplitter
-from multimodal_amr.models.data_loaders import DrugResistanceDataset_Fingerprints, SampleEmbDataset, DrugResistanceDataset_Embeddings
-from multimodal_amr.models.classifier import Residual_AMR_Classifier
+from multimodal_amr_tests_erges.data_split.data_utils import DataSplitter
+from multimodal_amr_tests_erges.models.data_loaders import DrugResistanceDataset_Fingerprints, SampleEmbDataset, DrugResistanceDataset_Embeddings
+from multimodal_amr_tests_erges.models.classifier import Residual_AMR_Classifier
 
 import shap
 
 TRAINING_SETUPS = list(itertools.product(['A', 'B', 'C', 'D'], ["random", "drug_species_zero_shot", "drugs_zero_shot"], np.arange(5)))
 
-def main(args):
+def main(args): #here
     config = vars(args)
     seed = args.seed
     # Setup output folders to save results
@@ -45,14 +45,26 @@ def main(args):
         os.makedirs(experiment_folder, exist_ok=True)
 
     # Read data
-    driams_long_table = pd.read_csv(args.driams_long_table)
+    subsample_data = pd.read_csv("/Users/em/Desktop/Uni-Spring24/XAIML-gitlab/b4-interpretable-antimicrobial-recommendation/MultimodalAMR/data/balanced_sample_ids.csv")
+    driams_long_table_1 = pd.read_csv(args.driams_long_table)
+    
+    # filtered_driams_long_table = pd.merge(driams_long_table_1, subsample_data[['sample_id']], on='sample_id', how='inner')
+    filtered_driams_long_table = pd.merge(driams_long_table_1, subsample_data, on='sample_id', how='inner')
+    # Drop the 'dataset_y' column
+    filtered_driams_long_table.drop('dataset_y', axis=1, inplace=True)
+
+    # Rename 'dataset_x' to 'dataset'
+    filtered_driams_long_table.rename(columns={'dataset_x': 'dataset'}, inplace=True)
+    print(filtered_driams_long_table.head(1))
     spectra_matrix = np.load(args.spectra_matrix).astype(float)
     drugs_df = pd.read_csv(args.drugs_df, index_col=0)
-    driams_long_table = driams_long_table[driams_long_table["drug"].isin(drugs_df.index)]
-
+    filtered_driams_long_table = filtered_driams_long_table[filtered_driams_long_table["drug"].isin(drugs_df.index)]
+    
     # Instantate data split
-    dsplit = DataSplitter(driams_long_table, dataset=args.driams_dataset)
+    dsplit = DataSplitter(filtered_driams_long_table, dataset=args.driams_dataset)
     samples_list = sorted(dsplit.long_table["sample_id"].unique())
+
+    other_metadata = ...
 
     # Split selection for the different experiments.
     if args.split_type == "random":
@@ -172,7 +184,8 @@ def main(args):
                 dr_tensor = X[:, 6001:]
                 response = []
                 dataset = []
-                batch = [species_idx, x_spectrum, dr_tensor, response, dataset]
+                year = []
+                batch = [species_idx, x_spectrum, dr_tensor, response, dataset, year]
                 return experiment.model(batch)
             
         shap_wrapper = ShapWrapper(experiment.model)
@@ -210,21 +223,27 @@ if __name__=="__main__":
     parser.add_argument("--seed", type=int, default=0)
 
     parser.add_argument("--driams_dataset", type=str, choices=['A', 'B', 'C', 'D'], default="B")
-    parser.add_argument("--driams_long_table", type=str)
-    parser.add_argument("--spectra_matrix", type=str)
-    parser.add_argument("--drugs_df", type=str)
+    parser.add_argument("--driams_long_table", type=str,
+                        default="../processed_data/DRIAMS_combined_long_table.csv")
+    parser.add_argument("--spectra_matrix", type=str,
+                        default="../data/DRIAMS-B/spectra_binned_6000_2018.npy")
+    parser.add_argument("--drugs_df", type=str,
+                        # default="../processed_data/GNN_embeddings.csv")
+                        default="../processed_data/drug_fingerprints.csv")
 
     parser.add_argument("--conv_out_size", type=int, default=512)
     parser.add_argument("--sample_embedding_dim", type=int, default=512)
     parser.add_argument("--drug_embedding_dim", type=int, default=512)
     
 
-    parser.add_argument("--drug_emb_type", type=str, default="fingerprint", choices=["fingerprint", "vae_embedding", "gnn_embedding"])
+    parser.add_argument("--drug_emb_type", type=str, default="gnn_embedding", choices=["fingerprint", "vae_embedding", "gnn_embedding"])
     parser.add_argument("--fingerprint_class", type=str, default="morgan_1024", choices=["all", "MACCS", "morgan_512", "morgan_1024", "pubchem", "none"])
     parser.add_argument("--fingerprint_size", type=int, default=128)
 
+    
 
     parser.add_argument("--n_hidden_layers", type=int, default=5)
+
 
     parser.add_argument("--n_epochs", type=int, default=1)
     parser.add_argument("--batch_size", type=int, default=512)

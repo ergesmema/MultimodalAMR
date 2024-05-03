@@ -1,6 +1,4 @@
 import sys
-sys.path.insert(0, "..")
-sys.path.insert(0, "../data_split")
 import os
 # os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
@@ -16,29 +14,30 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from tqdm import tqdm
 from argparse import ArgumentParser
 import json
-from multimodal_amr.experiments.pl_experiment import Classifier_Experiment
+from multimodal_amr.experiments.pl_experiment import Classifier_Experiment_TestMetrics
 import itertools
+
 from multimodal_amr.data_split.data_utils import DataSplitter
-from multimodal_amr.models.data_loaders import DrugResistanceDataset_Fingerprints, SampleEmbDataset, DrugResistanceDataset_Embeddings
-from multimodal_amr.models.classifier import Residual_AMR_Classifier
+from multimodal_amr.models.data_loaders import DrugResistanceDataset_Fingerprints, SampleEmbDataset
+from multimodal_amr.models.classifier import SpeciesBaseline_ResAMR_Classifier
+import sys
 
-import shap
-
-TRAINING_SETUPS = list(itertools.product(['A', 'B', 'C', 'D'], ["random", "drug_species_zero_shot", "drugs_zero_shot"], np.arange(5)))
+TRAINING_SETUPS = list(itertools.product(['A', 'B', 'C', 'D'], ["random", "drug_species_zero_shot"], np.arange(5)))
+# TRAINING_SETUPS = list(itertools.product(['A', 'B', 'C', 'D'], ["drugs_zero_shot"], np.arange(60)))
 
 def main(args):
     config = vars(args)
     seed = args.seed
     # Setup output folders to save results
-    output_folder = join(args.output_folder, args.experiment_group, args.experiment_name, str(args.seed))
+    output_folder = join("outputs", args.experiment_group, args.experiment_name, str(args.seed))
     if not exists(output_folder):
         os.makedirs(output_folder, exist_ok=True)
 
-    results_folder = join(args.output_folder, args.experiment_group, args.experiment_name + "_results")
+    results_folder = join("outputs", args.experiment_group, args.experiment_name + "_results")
     if not exists(results_folder):
         os.makedirs(results_folder, exist_ok=True)
 
-    experiment_folder = join(args.output_folder, args.experiment_group, args.experiment_name)
+    experiment_folder = join("outputs", args.experiment_group, args.experiment_name)
     if exists(join(results_folder, f"test_metrics_{args.seed}.json")):
         sys.exit(0)
     if not exists(experiment_folder):
@@ -46,7 +45,7 @@ def main(args):
 
     # Read data
     driams_long_table = pd.read_csv(args.driams_long_table)
-    spectra_matrix = np.load(args.spectra_matrix).astype(float)
+    spectra_matrix = np.load(args.spectra_matrix)
     drugs_df = pd.read_csv(args.drugs_df, index_col=0)
     driams_long_table = driams_long_table[driams_long_table["drug"].isin(drugs_df.index)]
 
@@ -72,14 +71,9 @@ def main(args):
 
     test_df.to_csv(join(output_folder, "test_set.csv"), index=False)
 
-    if args.drug_emb_type=="fingerprint":
-        train_dset = DrugResistanceDataset_Fingerprints(train_df, spectra_matrix, drugs_df, samples_list, fingerprint_class=config["fingerprint_class"])
-        val_dset = DrugResistanceDataset_Fingerprints(val_df, spectra_matrix, drugs_df, samples_list, fingerprint_class=config["fingerprint_class"])
-        test_dset = DrugResistanceDataset_Fingerprints(test_df, spectra_matrix, drugs_df, samples_list, fingerprint_class=config["fingerprint_class"])
-    elif args.drug_emb_type=="vae_embedding" or args.drug_emb_type=="gnn_embedding":
-        train_dset = DrugResistanceDataset_Embeddings(train_df, spectra_matrix, drugs_df, samples_list)
-        val_dset = DrugResistanceDataset_Embeddings(val_df, spectra_matrix, drugs_df, samples_list)
-        test_dset = DrugResistanceDataset_Embeddings(test_df, spectra_matrix, drugs_df, samples_list)
+    train_dset = DrugResistanceDataset_Fingerprints(train_df, spectra_matrix, drugs_df, samples_list, fingerprint_class=config["fingerprint_class"])
+    val_dset = DrugResistanceDataset_Fingerprints(val_df, spectra_matrix, drugs_df, samples_list, fingerprint_class=config["fingerprint_class"])
+    test_dset = DrugResistanceDataset_Fingerprints(test_df, spectra_matrix, drugs_df, samples_list, fingerprint_class=config["fingerprint_class"])
 
 
     sorted_species = sorted(dsplit.long_table["species"].unique())
@@ -106,8 +100,8 @@ def main(args):
         test_dset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
     
     # Instantiate model and pytorch lightning experiment
-    model = Residual_AMR_Classifier(config)
-    experiment = Classifier_Experiment(config, model)
+    model = SpeciesBaseline_ResAMR_Classifier(config)
+    experiment = Classifier_Experiment_TestMetrics(config, model)
 
     # Save summary of the model architecture
     if not exists(join(experiment_folder, "architecture.txt")):
@@ -134,7 +128,7 @@ def main(args):
     trainer = pl.Trainer(devices="auto", accelerator="auto", 
         default_root_dir=output_folder, max_epochs=args.n_epochs,#, callbacks=callbacks,
                         #  logger=tb_logger, log_every_n_steps=3
-                        # limit_train_batches=6, limit_val_batches=4, limit_test_batches=4
+                        # limit_train_batches=6
                          )
     trainer.fit(experiment, train_dataloaders=train_loader,
                 val_dataloaders=val_loader)
@@ -145,49 +139,9 @@ def main(args):
     test_results = trainer.test(ckpt_path="best", dataloaders=test_loader)
     with open(join(results_folder, "test_metrics_{}.json".format(seed)), "w") as f:
         json.dump(test_results[0], f, indent=2)
-        
-    background_loader = DataLoader(test_dset, batch_size=100, shuffle=True)
-    background = next(iter(background_loader))
-    X_background = torch.cat(background[:3], dim=1)
 
-    
-    test_fi_loader = DataLoader(test_dset, batch_size=len(test_dset), shuffle=False)
-    fi_batch = next(iter(test_fi_loader))
-    X_fi_batch = torch.cat(fi_batch[:3], dim=1)
-    
-    experiment.model.eval()
     test_df["Predictions"] = experiment.test_predictions
-    test_df.to_csv(join(results_folder, f"test_set_seed{seed}.csv"), index=False)
-    
-    if args.eval_importance:
-        print("Evaluating feature importance")
-        class ShapWrapper(nn.Module):
-            def __init__(self, model):
-                super().__init__()
-                self.model = model
-                
-            def forward(self, X):
-                species_idx = X[:, 0:1]
-                x_spectrum = X[:, 1:6001]
-                dr_tensor = X[:, 6001:]
-                response = []
-                dataset = []
-                batch = [species_idx, x_spectrum, dr_tensor, response, dataset]
-                return experiment.model(batch)
-            
-        shap_wrapper = ShapWrapper(experiment.model)
-        explainer = shap.DeepExplainer(shap_wrapper, X_background)
-        shap_values = explainer.shap_values(X_fi_batch)
-        column_names = ["Species"] + [f"Spectrum_{i}" for i in range(6000)] + [f"Fprint_{i}" for i in range(1024)]
-        np.save(join(results_folder, f"shap_values_seed{seed}.npy"), shap_values)
-        if not exists(join(output_folder, "shap_values_columns.json")):
-            with open(join(output_folder, "shap_values_columns.json"), "w") as f:
-                json.dump(column_names, f, indent=2)
-        
-        shap_values_df = pd.DataFrame(shap_values, columns=column_names)
-        shap_values_df.to_csv(join(output_folder, "shap_values.csv"), index=False)
-  
-    
+    test_df.to_csv(join(results_folder, "test_set_{}.csv".format(seed)), index=False)
     print("Testing complete")
 
 
@@ -197,16 +151,13 @@ def main(args):
 if __name__=="__main__":
 
     parser = ArgumentParser()
+    parser.add_argument("--training_setup", type=int)
 
-    parser.add_argument("--experiment_name", type=str, default="GNN")
-    parser.add_argument("--experiment_group", type=str, default="ResAMR")
-    parser.add_argument("--output_folder", type=str, default="outputs")
+    parser.add_argument("--experiment_name", type=str, default="ablation_spectrum")
+    parser.add_argument("--experiment_group", type=str, default="Species1hot_ResAMR")
     parser.add_argument("--split_type", type=str, default="random", choices=["random", "drug_species_zero_shot", "drugs_zero_shot"])
 
 
-    parser.add_argument("--training_setup", type=int)
-    parser.add_argument("--eval_importance", action="store_true")
-    
     parser.add_argument("--seed", type=int, default=0)
 
     parser.add_argument("--driams_dataset", type=str, choices=['A', 'B', 'C', 'D'], default="B")
@@ -219,15 +170,16 @@ if __name__=="__main__":
     parser.add_argument("--drug_embedding_dim", type=int, default=512)
     
 
-    parser.add_argument("--drug_emb_type", type=str, default="fingerprint", choices=["fingerprint", "vae_embedding", "gnn_embedding"])
-    parser.add_argument("--fingerprint_class", type=str, default="morgan_1024", choices=["all", "MACCS", "morgan_512", "morgan_1024", "pubchem", "none"])
-    parser.add_argument("--fingerprint_size", type=int, default=128)
+    parser.add_argument("--drug_emb_type", type=str, default="fingerprint", choices=["fingerprint", "vae_embedding"])
+    parser.add_argument("--fingerprint_class", type=str, default="morgan_1024", choices=["all", "MACCS", "morgan_512", "morgan_1024", "pubchem"])
+    parser.add_argument("--fingerprint_size", type=int, default=1024)
 
+    
 
     parser.add_argument("--n_hidden_layers", type=int, default=5)
 
     parser.add_argument("--n_epochs", type=int, default=1)
-    parser.add_argument("--batch_size", type=int, default=512)
+    parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--patience", type=int, default=50)
     parser.add_argument("--learning_rate", type=float, default=0.003)
     parser.add_argument("--weight_decay", type=float, default=1e-5)
@@ -238,13 +190,14 @@ if __name__=="__main__":
 
     if args.training_setup is not None:
         dataset, split_type, seed = TRAINING_SETUPS[args.training_setup]
-        
+        species_emb_dim = 0
         args.seed = seed
         args.driams_dataset = dataset
         args.split_type = split_type
     args.species_embedding_dim = 0
+
+    
     
     args.experiment_name = args.experiment_name + f"_DRIAMS-{args.driams_dataset}_{args.split_type}"
-
 
     main(args)
