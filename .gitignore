@@ -1,5 +1,6 @@
 newenv/
 gv_experiments/outputs
+tests_erges/outputs
 launch.json
 
 job.sh

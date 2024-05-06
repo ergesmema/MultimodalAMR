@@ -19,12 +19,12 @@ config:
   n_epochs: 2
   n_hidden_layers: 5
   n_unique_species: 22
-  num_workers: 12
+  num_workers: 8
   output_folder: outputs
   patience: 50
   sample_embedding_dim: 512
   species_embedding_dim: 0
-  spectra_matrix: /Users/em/Desktop/Uni-Spring24/XAIML-gitlab/b4-interpretable-antimicrobial-recommendation/MultimodalAMR/data/spectra_binned_6000_subset_all.npy
+  spectra_matrix: ../data/spectra_binned_6000_subset_all.npy
   split_type: random
   training_setup: null
   weight_decay: 1.0e-05

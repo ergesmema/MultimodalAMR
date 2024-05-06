@@ -45,7 +45,7 @@ def main(args): #here
         os.makedirs(experiment_folder, exist_ok=True)
 
     # Read data
-    subsample_data = pd.read_csv("/Users/em/Desktop/Uni-Spring24/XAIML-gitlab/b4-interpretable-antimicrobial-recommendation/MultimodalAMR/data/balanced_sample_ids.csv")
+    subsample_data = pd.read_csv("../data/balanced_sample_ids.csv")
     driams_long_table_1 = pd.read_csv(args.driams_long_table)
     
     # filtered_driams_long_table = pd.merge(driams_long_table_1, subsample_data[['sample_id']], on='sample_id', how='inner')

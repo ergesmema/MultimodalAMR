@@ -36,7 +36,7 @@ class Classifier_Experiment(pl.LightningModule):
         return optimizer
 
     def _step(self, batch):
-        response = batch[-2]
+        response = batch[-3]
         logits = self.model(batch)
         loss = self.loss_function(logits.view(-1, 1), response.view(-1, 1).float())
         predictions = torch.sigmoid(logits)
