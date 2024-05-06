@@ -37,6 +37,7 @@ class DrugResistanceDataset(Dataset):
         :spectra_matrix: matrix of 6000-dimensional MALDI-TOF spectra
         :drugs_df: DataFrame of embeddings derived from the ChEMBL VAE from morgan fingerprints
         """
+        #EDIT: Encoding species, dataset, and year to numerical ids
         self.long_table = long_table_df
         self.spectra_tensor = torch.tensor(spectra_matrix).float()
 
@@ -68,7 +69,7 @@ class DrugResistanceDataset(Dataset):
         # Convert the response to a tensor
         response = torch.tensor(response).float()
         
-        # Convert species, dataset, and year to tensor indices
+        # EDIT: Convert species, dataset, and year to tensor indices
         species_idx = torch.tensor([self.species2idx[species]], dtype=torch.long)
         dataset_idx = torch.tensor([self.dataset2idx[dataset]], dtype=torch.long)
         year_idx = torch.tensor([self.year2idx[year]], dtype=torch.long)

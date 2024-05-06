@@ -221,8 +221,9 @@ if __name__=="__main__":
     parser.add_argument("--eval_importance", action="store_true")
     
     parser.add_argument("--seed", type=int, default=0)
-
-    parser.add_argument("--driams_dataset", type=str, choices=['A', 'B', 'C', 'D'], default="B")
+    #EDIT: Expects list now
+    parser.add_argument("--driams_dataset", nargs='+', type=str, default=["A","B","C","D"],
+                    help="Specify one or more datasets from choices: A, B, C, D")
     parser.add_argument("--driams_long_table", type=str,
                         default="../processed_data/DRIAMS_combined_long_table.csv")
     parser.add_argument("--spectra_matrix", type=str,

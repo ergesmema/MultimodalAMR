@@ -1,0 +1,50 @@
+Residual_AMR_Classifier(
+  (sample_emb): Identity()
+  (spectrum_emb): Linear(in_features=6000, out_features=512, bias=True)
+  (drug_emb): Linear(in_features=1024, out_features=512, bias=True)
+  (net): ResMLP(
+    (net): Sequential(
+      (0): ResBlock(
+        (block): Sequential(
+          (0): ReLU()
+          (1): Linear(in_features=1027, out_features=1027, bias=True)
+          (2): Dropout(p=0.2, inplace=False)
+          (3): BatchNorm1d(1027, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+      (1): ResBlock(
+        (block): Sequential(
+          (0): ReLU()
+          (1): Linear(in_features=1027, out_features=1027, bias=True)
+          (2): Dropout(p=0.2, inplace=False)
+          (3): BatchNorm1d(1027, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+      (2): ResBlock(
+        (block): Sequential(
+          (0): ReLU()
+          (1): Linear(in_features=1027, out_features=1027, bias=True)
+          (2): Dropout(p=0.2, inplace=False)
+          (3): BatchNorm1d(1027, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+      (3): ResBlock(
+        (block): Sequential(
+          (0): ReLU()
+          (1): Linear(in_features=1027, out_features=1027, bias=True)
+          (2): Dropout(p=0.2, inplace=False)
+          (3): BatchNorm1d(1027, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+      (4): ResBlock(
+        (block): Sequential(
+          (0): ReLU()
+          (1): Linear(in_features=1027, out_features=1027, bias=True)
+          (2): Dropout(p=0.2, inplace=False)
+          (3): BatchNorm1d(1027, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+        )
+      )
+      (5): Linear(in_features=1027, out_features=1, bias=True)
+    )
+  )
+)

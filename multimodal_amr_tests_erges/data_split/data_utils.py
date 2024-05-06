@@ -36,9 +36,9 @@ class DataSplitter:
     def __init__(self, long_table=None, dataset=None):
         self.long_table = long_table
         if dataset is not None:
-            self.long_table = long_table[long_table["dataset"] == dataset].reset_index(
-                drop=True
-            )
+                #EDIT: Filtering the long_table to only include the datasets given by command argument
+                self.long_table = long_table[long_table["dataset"].isin(dataset)].reset_index(drop=True)
+        
         self.dataset = dataset
 
     def __len__(self):

@@ -213,9 +213,10 @@ class Residual_AMR_Classifier(nn.Module):
         )
 
         # Output network
+        #EDIT: Changed dimension
         self.net = ResMLP(
             config["n_hidden_layers"],
-            config["sample_embedding_dim"] + config["drug_embedding_dim"]+2,
+            config["sample_embedding_dim"] + config["drug_embedding_dim"]+3,
             1,
             p_dropout=0.2,
         )
@@ -233,17 +234,19 @@ class Residual_AMR_Classifier(nn.Module):
             return self.sample_emb(spectrum_embedding)
 
     def forward(self, batch):
+
+        #EDIT: include dataset and year and species
         species_idx, x_spectrum, dr_tensor, response, dataset, year = batch
         spectrum_embedding = self.embed_spectrum(x_spectrum)
         sample_emb = self.embed_sample(species_idx, spectrum_embedding)
         dr_emb = self.drug_emb(dr_tensor)
+        # print(species_idx.shape)
         # print(sample_emb.shape)
         # print(dr_emb.shape)
         # print(dataset.shape)
         # print(year.shape)
-        # print(combined_input.shape)
-        
-        return self.net(torch.cat([dr_emb, sample_emb, dataset, year], dim=1))
+            
+        return self.net(torch.cat([species_idx, dr_emb, sample_emb, dataset, year], dim=1))
         
 
 
