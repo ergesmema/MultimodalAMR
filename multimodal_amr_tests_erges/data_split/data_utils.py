@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, GroupShuffleSplit
 
 
 def sum_solver(arr, target_sum):
@@ -49,6 +49,82 @@ class DataSplitter:
 
     ###############################################################
     # SIMPLE DATA SPLIT FUNCTIONS
+
+    # def stratified_train_val_test_split(self, val_size=0.1, test_size=0.2, random_state=42):
+    #     n_test = (
+    #         test_size
+    #         if isinstance(test_size, int)
+    #         else int(test_size * len(self.long_table))
+    #     )
+    #     n_val = (
+    #         val_size
+    #         if isinstance(test_size, int)
+    #         else int(test_size * len(self.long_table))
+    #     )
+    #     assert n_val + n_test < len(self.long_table), "Invalid val and test size"
+
+    #     n_splits = 1  # Number of re-shuffling & splitting iterations
+    #     test_size = n_test  # Size of the test set
+    #     val_size = n_val  # Size of the validation set after initial split
+
+    #     # Create the GroupShuffleSplit object
+    #     gss = GroupShuffleSplit(n_splits=n_splits, test_size=test_size, random_state=random_state)
+
+    #     # Split the data ensuring the same sample_id stays in the same subset
+    #     train_val_idx, test_idx = next(gss.split(self.long_table, groups=self.long_table['sample_id']))
+
+    #     # Extract train_val and test sets
+    #     train_val_X = self.long_table.iloc[train_val_idx]
+    #     test_X = self.long_table.iloc[test_idx]
+
+    #     # Now split train_val into train and validation sets
+    #     # Recreate a GroupShuffleSplit for the second split (validation split)
+    #     gss_val = GroupShuffleSplit(n_splits=n_splits, test_size=val_size, random_state=random_state**2)
+    #     train_idx, val_idx = next(gss_val.split(train_val_X, groups=train_val_X['sample_id']))
+
+    #     # Extract train and val sets
+    #     train_X = train_val_X.iloc[train_idx]
+    #     val_X = train_val_X.iloc[val_idx]
+
+    
+    #     return train_X, val_X, test_X
+
+    def stratified_group_split(self,df, group_col, stratify_col, test_size, val_size, random_state):
+        groups = df[group_col].unique()
+        train_idx, val_idx, test_idx = [], [], []
+        
+        for group in groups:
+            group_data = df[df[group_col] == group]
+            # Handle groups with insufficient samples
+            if len(group_data) <= 1:
+                train_idx.extend(group_data.index.tolist())
+                continue
+            
+            try:
+                rest_data, group_test = train_test_split(
+                    group_data, test_size=test_size, stratify=group_data[stratify_col], random_state=random_state
+                )
+                group_train, group_val = train_test_split(
+                    rest_data, test_size=val_size / (1 - test_size), stratify=rest_data[stratify_col], random_state=random_state
+                )
+                train_idx.extend(group_train.index.tolist())
+                val_idx.extend(group_val.index.tolist())
+                test_idx.extend(group_test.index.tolist())
+            except ValueError:
+                # Fallback if the split is still not possible (extremely small groups)
+                train_idx.extend(group_data.index.tolist())
+        
+        return df.loc[train_idx], df.loc[val_idx], df.loc[test_idx]
+
+    # Example usage within your method
+    def stratified_train_val_test_split(self, val_size=0.1, test_size=0.2, random_state=42):
+        train_X, val_X, test_X = self.stratified_group_split(
+            self.long_table, 'sample_id', 'species', test_size, val_size, random_state
+        )
+        return train_X, val_X, test_X
+    
+
+        
 
     def random_train_val_test_split(self, val_size=0.1, test_size=0.2, random_state=42):
         n_test = (

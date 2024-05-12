@@ -2,6 +2,8 @@ newenv/
 gv_experiments/outputs
 tests_erges/outputs
 launch.json
+parquet_data/
+binned_data/
 
 job.sh
 job.sub

@@ -74,6 +74,7 @@ class Classifier_Experiment(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         response = batch[-2]
         loss, logs, predictions = self._step(batch)
+        
         self.test_predictions.extend(predictions.cpu().flatten().tolist())
         self.log("test_loss", loss, on_step=False, on_epoch=True, batch_size=self.batch_size)
         return logs

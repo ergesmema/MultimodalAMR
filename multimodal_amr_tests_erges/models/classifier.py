@@ -247,7 +247,6 @@ class Residual_AMR_Classifier(nn.Module):
         # print(year.shape)
             
         return self.net(torch.cat([species_idx, dr_emb, sample_emb, dataset, year], dim=1))
-        
 
 
 
