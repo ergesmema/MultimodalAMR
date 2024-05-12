@@ -15,11 +15,11 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from tqdm import tqdm
 from argparse import ArgumentParser
 import json
-from multimodal_amr_tests_erges.experiments.pl_experiment import Classifier_Experiment
+from multimodal_amr.experiments.pl_experiment import Classifier_Experiment
 import itertools
-from multimodal_amr_tests_erges.data_split.data_utils import DataSplitter
-from multimodal_amr_tests_erges.models.data_loaders import DrugResistanceDataset_Fingerprints, SampleEmbDataset, DrugResistanceDataset_Embeddings
-from multimodal_amr_tests_erges.models.classifier import Residual_AMR_Classifier
+from multimodal_amr.data_split.data_utils import DataSplitter
+from multimodal_amr.models.data_loaders import DrugResistanceDataset_Fingerprints, SampleEmbDataset, DrugResistanceDataset_Embeddings
+from multimodal_amr.models.classifier import Residual_AMR_Classifier
 
 import shap
 
