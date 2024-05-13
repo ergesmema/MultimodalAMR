@@ -1,7 +1,8 @@
 
 gv_experiments/outputs
 launch.json
-
+gv_experiments/binned_data/
+inference/
 job.sh
 job.sub
 *.sh
@@ -10,7 +11,7 @@ gv_experiments/*.ipynb
 gv_experiments/OLD
 gv_experiments/experimental_notebooks
 .vscode/
-
+*.gitignore
 data/DRIAMS-A
 data/DRIAMS-B
 data/DRIAMS-C
